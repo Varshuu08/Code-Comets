@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Healthhelper — Neon Medical Chat</title>
+  <meta name="description" content="Healthhelper: Neon-themed AI medical chat interface (HTML/CSS/JS single file). Accessible, responsive, and animated." />
+  <style>
+    /* ====== Base / Accessibility ====== */
+    :root{
+      --bg-dark: #06070a;
+      --bg-panel: linear-gradient(180deg,#071126 0%, #08121a 60%);
+      --neon-blue: #00d1ff;
+      --neon-green: #3cff8e;
+      --neon-pink: #ff3bd6;
+      --glass: rgba(255,255,255,0.03);
+      --glass-2: rgba(255,255,255,0.04);
+      --text: #eaf6ff;
+      --muted: #9fb7c9;
+      --radius: 14px;
+      --safe-size: 18px; /* base accessible font size */
+    }
+
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      font-size:var(--safe-size);
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 10% 20%, rgba(0,209,255,0.08), transparent),
+                  radial-gradient(800px 400px at 85% 80%, rgba(255,59,214,0.06), transparent),
+                  var(--bg-dark);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      line-height:1.35;
+    }
+
+    /* Container layout */
+    .app{
+      display:grid;
+      grid-template-columns:320px 1fr;
+      gap:18px;
+      padding:22px;
+      height:100vh;
+      box-sizing:border-box;
+      align-items:center;
+      justify-items:center;
+    }
+
+    /* Topbar for narrow screens */
+    @media (max-width:880px){
+      .app{grid-template-columns:1fr; padding:12px;}
+    }
+
+    /* Sidebar / Topbar */
+    .sidebar{
+      width:100%;
+      max-width:360px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:var(--radius);
+      border:1px solid rgba(255,255,255,0.04);
+      padding:20px;
+      box-shadow:0 8px 30px rgba(0,0,0,0.6);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .brand{
+      display:flex;gap:12px;align-items:center;margin-bottom:12px;
+    }
+    .logo{
+      width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--neon-blue),var(--neon-pink));
+      display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(0,0,0,0.6), 0 0 18px rgba(0,209,255,0.12) inset;
+      font-weight:700;color:#04121a;font-size:18px;
+    }
+    .brand h1{font-size:20px;margin:0}
+    .brand p{margin:0;color:var(--muted);font-size:13px}
+
+    .nav{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+    .nav button{
+      display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.03);
+      color:var(--text);cursor:pointer;font-weight:600;font-size:15px;text-align:left;
+    }
+    .nav button:focus{outline:3px solid rgba(0,209,255,0.12)}
+
+    .nav .hot{border-left:4px solid var(--neon-pink);box-shadow:0 8px 30px rgba(255,59,214,0.04) inset}
+
+    .sidebar .small{color:var(--muted);font-size:13px;margin-top:10px}
+
+    /* Chat panel */
+    .panel{
+      width:100%;height:80vh;max-width:980px;background:var(--bg-panel);border-radius:18px;padding:24px;display:flex;flex-direction:column;box-shadow:0 10px 50px rgba(2,6,23,0.8);border:1px solid rgba(255,255,255,0.03);
+    }
+
+    .panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .panel-header .welcome{display:flex;gap:12px;align-items:center}
+    .avatar{
+      width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--neon-green),var(--neon-blue));display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 6px 20px rgba(0,0,0,0.6);
+    }
+    .panel-header h2{margin:0;font-size:18px}
+    .panel-header p{margin:0;color:var(--muted);font-size:13px}
+
+    /* Chat area */
+    .chat-area{flex:1;overflow:auto;padding:18px 6px;display:flex;flex-direction:column;gap:12px}
+
+    /* Message bubbles */
+    .msg{max-width:75%;padding:12px 14px;border-radius:14px;position:relative;font-size:15px}
+    .msg.user{align-self:flex-end;background:linear-gradient(90deg, rgba(0,209,255,0.08), rgba(60,255,142,0.04));border:1px solid rgba(0,209,255,0.16);color:var(--text);}
+    .msg.ai{align-self:flex-start;background:linear-gradient(90deg, rgba(255,59,214,0.06), rgba(0,209,255,0.04));border:1px solid rgba(255,59,214,0.08);color:var(--text);}
+
+    .msg .meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:6px}
+
+    .msg .emoji{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.03);display:inline-flex;align-items:center;justify-content:center;font-size:16px;margin-right:6px}
+
+    /* Glow + entrance animations */
+    .msg.ai{animation:popIn 420ms cubic-bezier(.2,.95,.2,1)}
+    .msg.user{animation:popIn 420ms cubic-bezier(.2,.95,.2,1)}
+    @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+
+    /* Input area */
+    .composer{display:flex;gap:12px;align-items:center;padding:14px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);}
+    .input{flex:1;display:flex;align-items:center;gap:10px}
+    .input textarea{width:100%;min-height:48px;max-height:120px;padding:12px;border-radius:10px;background:transparent;border:none;color:var(--text);resize:none;font-size:15px}
+    .input textarea:focus{outline:3px solid rgba(0,209,255,0.08)}
+
+    .send-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;background:linear-gradient(45deg,var(--neon-blue),var(--neon-pink));border:none;color:#04121a;font-weight:800;cursor:pointer;box-shadow:0 8px 30px rgba(0,209,255,0.08);}
+    .send-btn[aria-busy="true"]{opacity:0.9;filter:brightness(.96);cursor:wait}
+
+    /* Loading / heartbeat */
+    .loader{display:inline-block;vertical-align:middle}
+    .steth{width:40px;height:40px;border-radius:999px;display:inline-grid;place-items:center;background:linear-gradient(135deg,var(--neon-pink),var(--neon-blue));box-shadow:0 6px 20px rgba(255,59,214,0.06),0 0 18px rgba(0,209,255,0.06) inset}
+    .steth svg{width:22px;height:22px;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.6))}
+    .spin{animation:spin 1.4s linear infinite}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+    .heartbeat{
+      width:120px;height:24px;display:inline-block;position:relative;overflow:hidden
+    }
+    .heartbeat svg{width:100%;height:100%;stroke:var(--neon-green);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:600;stroke-dashoffset:600;animation:beat 2s linear infinite}
+    @keyframes beat{0%{stroke-dashoffset:600}20%{stroke-dashoffset:0}30%{stroke-dashoffset:600}100%{stroke-dashoffset:600}}
+
+    /* Footer small print */
+    .footer{display:flex;gap:12px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px}
+
+    /* Dark-mode toggle */
+    .toggle{display:inline-flex;align-items:center;gap:8px;padding:6px;border-radius:999px;background:rgba(255,255,255,0.02)}
+
+    /* Responsive adjustments */
+    @media (max-width:880px){
+      .panel{height:86vh;padding:16px}
+      .sidebar{order:2;width:100%;max-width:none}
+      .panel{order:1}
+    }
+
+    /* High contrast focus states */
+    :focus{outline:none}
+    button:focus, textarea:focus, .nav button:focus{box-shadow:0 0 0 4px rgba(0,209,255,0.08);}
+
+    /* Accessibility sizes for large screens */
+    @media (min-width:1200px){:root{--safe-size:19px}}
+
+    /* Darker neon mode */
+    .dark{background:linear-gradient(120deg,#02060a,#041022 60%)}
+    .dark .panel{background:linear-gradient(180deg,#02061a,#02101a)}
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Healthhelper AI assistant">
+
+    <aside class="sidebar" aria-label="Navigation and features">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">HH</div>
+        <div>
+          <h1>Healthhelper</h1>
+          <p>Neon AI health assistant</p>
+        </div>
+      </div>
+
+      <div class="nav" role="navigation" aria-label="Primary navigation">
+        <button class="hot" id="btn-chat" aria-controls="chat-panel">💬 Chat with Healthhelper</button>
+        <button id="btn-diagnoses">📁 View Past Diagnoses</button>
+        <button id="btn-find">📍 Find Nearby Hospitals</button>
+        <button id="btn-learn">📚 Learn About Conditions</button>
+      </div>
+
+      <p class="small">Tip: Use keyboard — Tab to cycle, Enter to send. Large tap targets for mobile.</p>
+
+      <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+        <div class="footer">
+          <div class="toggle" style="cursor:pointer" id="darkToggle" role="switch" aria-checked="false" tabindex="0">🌙 Dark Mode</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted)">v1.0</div>
+      </div>
+
+      <details style="margin-top:14px;color:var(--muted);font-size:13px">
+        <summary>About</summary>
+        <p style="margin:8px 0">Healthhelper is a UI prototype — not a substitute for medical advice. For real emergencies call local emergency services.</p>
+      </details>
+
+    </aside>
+
+    <main class="panel" id="chat-panel" tabindex="0">
+      <div class="panel-header">
+        <div class="welcome">
+          <div class="avatar" aria-hidden="true">🩺</div>
+          <div>
+            <h2>Hi, I'm Healthhelper!</h2>
+            <p>Your AI health assistant. Tell me your symptoms, and I'll help you.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="loader" id="miniLoader" aria-hidden="true" style="display:none">
+            <div class="steth spin" title="thinking">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v6" stroke="#04121a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="chat-area" id="chatArea" aria-live="polite">
+        <!-- initial welcome bubble -->
+        <div class="msg ai" role="article">
+          <div class="meta"><span class="emoji">👩‍⚕️</span><strong>Healthhelper</strong> · now</div>
+          <div class="text">Hi, I'm Healthhelper! Your AI health assistant. Tell me your symptoms, and I'll help you.</div>
+        </div>
+      </section>
+
+      <div style="margin-top:12px">
+        <div class="composer" role="region" aria-label="Message composer">
+          <div class="input">
+            <label for="message" class="sr-only">Describe your symptoms</label>
+            <textarea id="message" placeholder="Type your symptoms (e.g., fever, sore throat, headache)..." aria-label="Type your symptoms here" rows="1"></textarea>
+          </div>
+          <button class="send-btn" id="sendBtn" aria-label="Send message">Send ➤</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <div style="color:var(--muted);font-size:13px">Large, readable UI — accessible controls</div>
+        <div style="font-size:13px;color:var(--muted)">Privacy: local-only demo</div>
+      </div>
+
+      <!-- Hidden deployment guide for power users -->
+      <details style="margin-top:14px;color:var(--muted);font-size:13px">
+        <summary>Deployment & Setup Guide</summary>
+        <div style="margin-top:10px">
+          <h3 style="margin:0 0 6px 0">1) Quick local preview</h3>
+          <ol>
+            <li>Save this file as <code>healthhelper.html</code>.</li>
+            <li>Open it in any modern browser (Chrome/Edge/Firefox).</li>
+          </ol>
+          <h3 style="margin:8px 0 6px 0">2) Simple static hosting (free)</h3>
+          <ol>
+            <li>GitHub Pages: Create a repo, push the file to <code>index.html</code>, enable Pages in repo settings.</li>
+            <li>Netlify / Vercel: Drag-and-drop the file to deploy (both have free tiers).</li>
+          </ol>
+          <h3 style="margin:8px 0 6px 0">3) Adding a real AI backend</h3>
+          <ol>
+            <li>Expose a small API endpoint that accepts POST /diagnose with a JSON body <code>{message: string}</code>.</li>
+            <li>Replace the <code>simulateAiResponse</code> function with proper fetch() calls to your server. Don't forget CORS and auth.</li>
+            <li>Keep user data secure — never send PII without consent. Always show disclaimers and emergency instructions.</li>
+          </ol>
+          <h3 style="margin:8px 0 6px 0">4) Accessibility & Compliance</h3>
+          <ul>
+            <li>Increase contrast, test with screen readers, make labels explicit.</li>
+            <li>Follow local healthcare data regulations if storing real data (e.g., HIPAA in US).</li>
+          </ul>
+        </div>
+      </details>
+
+    </main>
+
+  </div>
+
+  <script>
+    // Simple single-file logic — no frameworks.
+    (function(){
+      const chatArea = document.getElementById('chatArea');
+      const messageInput = document.getElementById('message');
+      const sendBtn = document.getElementById('sendBtn');
+      const miniLoader = document.getElementById('miniLoader');
+      const btnDiagnoses = document.getElementById('btn-diagnoses');
+      const btnFind = document.getElementById('btn-find');
+      const btnLearn = document.getElementById('btn-learn');
+      const darkToggle = document.getElementById('darkToggle');
+
+      // Accessibility helper
+      function speak(text){
+        // aria-live region exists on chatArea; ensure user gets focus feedback.
+        chatArea.setAttribute('aria-busy','true');
+        setTimeout(()=>chatArea.setAttribute('aria-busy','false'),500);
+      }
+
+      function formatTime(date){
+        return new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(date);
+      }
+
+      function appendMessage({who='ai',text='...',meta=null,loading=false}){
+        const el = document.createElement('div');
+        el.className = 'msg ' + (who==='user' ? 'user' : 'ai');
+        el.setAttribute('role','article');
+
+        if(meta || who!=='user'){
+          const m = document.createElement('div'); m.className='meta';
+          const emoji = document.createElement('span'); emoji.className='emoji';
+          emoji.textContent = who==='user' ? '🙂' : '👩‍⚕️';
+          m.appendChild(emoji);
+          const whoEl = document.createElement('strong'); whoEl.textContent = who==='user' ? 'You' : 'Healthhelper';
+          m.appendChild(whoEl);
+          const ts = document.createElement('span'); ts.style.marginLeft='8px'; ts.textContent = '· ' + formatTime(new Date());
+          m.appendChild(ts);
+          el.appendChild(m);
+        }
+
+        const txt = document.createElement('div'); txt.className='text';
+        if(loading){
+          const loader = document.createElement('div'); loader.className='steth spin'; loader.style.display='inline-block';
+          loader.setAttribute('aria-hidden','true');
+          loader.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v6" stroke="#04121a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          txt.appendChild(loader);
+          const span = document.createElement('span'); span.style.marginLeft='10px'; span.textContent='Thinking...'; txt.appendChild(span);
+        } else {
+          txt.textContent = text;
+        }
+
+        el.appendChild(txt);
+        chatArea.appendChild(el);
+        chatArea.scrollTop = chatArea.scrollHeight;
+
+        return el;
+      }
+
+      // Simple local storage for past messages (diagnoses)
+      function saveDiagnosis(summary){
+        try{
+          const list = JSON.parse(localStorage.getItem('healthhelper.diagnoses')||'[]');
+          list.unshift({when:Date.now(),summary});
+          localStorage.setItem('healthhelper.diagnoses',JSON.stringify(list.slice(0,50)));
+        }catch(e){console.warn(e)}
+      }
+
+      function showDiagnoses(){
+        const list = JSON.parse(localStorage.getItem('healthhelper.diagnoses')||'[]');
+        const out = list.length ? list.map(d=>('- '+ new Date(d.when).toLocaleString()+': '+d.summary)).join('\n') : 'No past diagnoses yet.';
+        appendMessage({who:'ai',text:out});
+      }
+
+      // Simulated AI response (replace with real API calls)
+      function simulateAiResponse(userText){
+        miniLoader.style.display='inline-block';
+        sendBtn.setAttribute('aria-busy','true');
+
+        // create loading bubble
+        const loadingBubble = appendMessage({who:'ai',loading:true});
+
+        // simple heuristics for demo
+        return new Promise((resolve)=>{
+          setTimeout(()=>{
+            miniLoader.style.display='none';
+            sendBtn.removeAttribute('aria-busy');
+            // remove loading bubble
+            loadingBubble.remove();
+
+            let reply = '';
+            const t = userText.toLowerCase();
+            if(t.includes('fever') || t.includes('temperature')){
+              reply = 'I see you have a fever. Check temperature regularly, rest, stay hydrated. If >39°C or persistent, seek medical attention.';
+            } else if(t.includes('headache')){
+              reply = 'Headache noted. Consider hydration, rest, and over-the-counter pain relief. If sudden/severe or with vision changes, seek care.';
+            } else if(t.trim().length<4){
+              reply = 'Could you tell me more about your symptoms? More detail gives better suggestions.';
+            } else {
+              reply = 'Thanks — based on what you wrote: rest, monitor symptoms, and if you feel shortness of breath, chest pain, severe dizziness, or fainting, seek immediate care.';
+            }
+
+            // append actual reply
+            appendMessage({who:'ai',text:reply});
+            saveDiagnosis(reply);
+            resolve(reply);
+          }, 1200 + Math.random()*1000);
+        })
+      }
+
+      // Send handler
+      function handleSend(){
+        const text = messageInput.value.trim();
+        if(!text) return;
+        appendMessage({who:'user',text});
+        messageInput.value='';
+        messageInput.focus();
+        simulateAiResponse(text).then(()=>{});
+      }
+
+      // Event listeners
+      sendBtn.addEventListener('click', handleSend);
+      messageInput.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+      });
+
+      btnDiagnoses.addEventListener('click', ()=>showDiagnoses());
+      btnFind.addEventListener('click', ()=>{
+        appendMessage({who:'ai',text:'Attempting to find nearby hospitals...'});
+        if(navigator.geolocation){
+          navigator.geolocation.getCurrentPosition(function(pos){
+            const lat = pos.coords.latitude.toFixed(4), lon = pos.coords.longitude.toFixed(4);
+            appendMessage({who:'ai',text:`Detected location: ${lat}, ${lon}. Use a real API (Google Places / OpenStreetMap) to list nearby hospitals. This demo cannot call those APIs.`});
+          }, function(err){
+            appendMessage({who:'ai',text:'Location access denied. Please allow location or enter your city manually.'});
+          });
+        } else { appendMessage({who:'ai',text:'Geolocation not supported in your browser.'}); }
+      });
+
+      btnLearn.addEventListener('click', ()=>{
+        appendMessage({who:'ai',text:'Learn about common conditions: Fever, Cold & Flu, Headache, Allergies. (This is a demo — consult healthcare professionals for diagnosis.)'});
+      });
+
+      // Dark mode toggle
+      function setDark(on){
+        document.body.classList.toggle('dark', !!on);
+        darkToggle.setAttribute('aria-checked', !!on);
+      }
+      darkToggle.addEventListener('click', ()=> setDark(!document.body.classList.contains('dark')));
+      darkToggle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); darkToggle.click(); } });
+
+      // keyboard shortcuts and focus states
+      document.addEventListener('keydown', (e)=>{
+        if((e.ctrlKey || e.metaKey) && e.key === 'k'){ e.preventDefault(); messageInput.focus(); }
+      });
+
+      // initial focus
+      messageInput.focus();
+
+      // Small accessibility helper: provide sr-only label style
+      const style = document.createElement('style'); style.innerHTML = '.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}'; document.head.appendChild(style);
+
+    })();
+  </script>
+</body>
+</html>
